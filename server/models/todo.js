@@ -1,7 +1,7 @@
 var mongoose = require('mongoose');
 
 // creates a new Mongoose model object
-var Todo = mongoose.model('Todo', {
+var Todo = mongoose.model('Todos', {
   text: {
     type: String,   // text is a String
     required: true,

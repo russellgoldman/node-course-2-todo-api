@@ -5,12 +5,12 @@ var { mongoose } = require('./db/mongoose');
 var { Todo } = require('./models/todo');
 var { User } = require('./models/user');
 
-// create express app
+// create an express app
 var app = express();
-// tacks middleware onto the express app
+// tack middleware onto the express app
 app.use(bodyParser.json());
 
-// POST receives information from another client over the server
+// Actions to perform when a POST request is sent to the server on /todos
 app.post('/todos', (req, res) => {
   // instantiating the Todo model
   var todo = new Todo({
@@ -28,10 +28,11 @@ app.post('/todos', (req, res) => {
   });
 });
 
-// Attempt to get from the Todos route
+// Actions to perform when a GET request is sent to the server on /todos
 app.get('/todos', (req, res) => {
+  // Todo object model inherits Mongoose which has the connection route tacked onto it from mongoose.js
   Todo.find().then((todos) => {
-    res.send({todos});
+    res.send({todos});    // send the todos documents
   }, (err) => {
     res.status(400).send(err);
   });

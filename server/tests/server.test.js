@@ -7,8 +7,18 @@ var { Todo } = require('./../models/todo');
 
 // beforeEach is included in Mocha, has the done function built-in as a parameter
 // beforeEach runs before ANY requests, and terminates when done() is called
+
+const todos = [{
+  text: 'First test todo'
+}, {
+  text: 'Second test todo'
+}];
+
 beforeEach((done) => {
-  Todo.remove({}).then(() => done());    // wipes all Todos
+  Todo.remove({}).then(() => {
+    // convert all items in array into MongoDB object modals
+    return Todo.insertMany(todos)      // each item in todos is an object which will be converted
+  }).then(() => done());
 })
 
 // mocha
@@ -32,10 +42,10 @@ describe('POST /todos', () => {
           return done(err);      // if there is an error with the request, return the error and end
         }
         // query the MongoDB database and confirm the Todo was saved
-        Todo.find().then((todos) => {     // todo documents included as a callback parameter
-          expect(todos.length).toBe(1);
-          expect(todos[0].text).toBe(text);
-          done();
+        Todo.find({text}).then((todos) => {     // todo documents included as a callback parameter
+          expect(todos.length).toBe(1);   // we are deleting all existing Todo's before adding so the length should be 1
+          expect(todos[0].text).toBe(text); // Todo value should be same as one sent via POST
+          done();   // exit asynchronously
         }).catch((err) => done(err));    // if there is an error querying the database, return the error and end
       });
   });
@@ -51,9 +61,21 @@ describe('POST /todos', () => {
         }
 
         Todo.find().then((todos) => {
-          expect(todos.length).toBe(0);   // if bad data is sent, then no Todo should be made, hence lenght would be 0
+          expect(todos.length).toBe(2);   // if bad data is sent, then no Todo should be made, hence lenght would be 0
           done();
         }).catch((err) => done(err));     // if query failed, return error message and exit
       })
   })
+});
+
+describe('GET /todos', () => {
+  it('should get all todos', (done) => {
+    request(app)
+      .get('/todos')
+      .expect(200)
+      .expect((res) => {
+        expect(res.body.todos.length).toBe(2);
+      })
+      .end(done);
+  });
 });

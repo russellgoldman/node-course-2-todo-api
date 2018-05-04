@@ -8,6 +8,9 @@ var { User } = require('./models/user');
 
 // create an express app
 var app = express();
+// process.env.PORT sets a custom port for Heroku
+const port = process.env.PORT || 3000;
+
 // tack middleware onto the express app
 app.use(bodyParser.json());
 
@@ -58,8 +61,8 @@ app.get('/todos/:id', (req, res) => {
   }).catch((err) => res.status(400).send());
 })
 
-app.listen(3000, () => {
-  console.log('Started on port 3000');
+app.listen(port, () => {
+  console.log(`Started on port ${port}`);
 });
 
 module.exports = {

@@ -42,7 +42,7 @@ app.get('/todos', (req, res) => {
   });
 });
 
-// GET /todos/12341232
+// GET /todos/12341232 (gets any id after the /todos/)
 app.get('/todos/:id', (req, res) => {
   // key/value pair for :id
   var id = req.params.id;
@@ -59,7 +59,30 @@ app.get('/todos/:id', (req, res) => {
     }
     res.send({todo});
   }).catch((err) => res.status(400).send());
-})
+});
+
+app.delete('/todos/:id', (req, res) => {
+    // get the id
+  var id = req.params.id;
+
+  // validate the id -> not valid? return 404
+  if (!ObjectID.isValid(id)) {
+    // 404 is not found
+    return res.status(404).send();
+  }
+
+  Todo.findByIdAndRemove(id).then((todo) => {
+    if (!todo) {
+      // todo doesn't exist, id is valid but can't be found (404 is not found)
+      return res.status(404).send();
+    }
+    // no need to include status(200) as 200 is the default (OK)
+    res.send(todo);
+  }).catch((e) => {
+    // 400 is bad request
+    res.status(400).send();
+  });
+});
 
 app.listen(port, () => {
   console.log(`Started on port ${port}`);

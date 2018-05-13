@@ -17,9 +17,10 @@ const todos = [{
   text: 'Second test todo'
 }];
 
+// ALLOWS FOR DELETE TEST TO WORK
 beforeEach((done) => {
   Todo.remove({}).then(() => {
-    // convert all items in array into MongoDB object modals
+    // convert all items in array into Mongo object models AND saves them in our DB (new Todo + save())
     return Todo.insertMany(todos)      // each item in todos is an object which will be converted
   }).then(() => done());
 })
@@ -64,7 +65,7 @@ describe('POST /todos', () => {
         }
 
         Todo.find().then((todos) => {
-          expect(todos.length).toBe(2);   // if bad data is sent, then no Todo should be made, hence lenght would be 0
+          expect(todos.length).toBe(2);   // if bad data is sent, then no Todo should be made, hence length would be 0
           done();
         }).catch((err) => done(err));     // if query failed, return error message and exit
       })
@@ -112,4 +113,49 @@ describe('GET /todos/:id', () => {
       .end(done);
   })
 
+});
+
+describe('DELETE /todos/:id', () => {
+  it('should remove a todo', (done) => {
+    var hexId = todos[1]._id.toHexString();
+
+    request(app)
+      .delete(`/todos/${hexId}`)
+      .expect(200)
+      .expect((res) => {
+        // res.body.todo._id returns the hexIdString
+        expect(res.body.todo._id).toBe(hexId);
+      })
+      .end((err, res) => {
+        // this function block runs regardless of an error being present
+        if (err) {
+          // if error, request failed (res is null), return error message and exit
+          return done(err);
+        }
+        // query database using findById, if null everything is good
+        Todo.findById(hexId).then((todo) => {
+          // todo should be removed if everything worked fine
+          expect(todo).toBeFalsy();
+          done();
+        }).catch((err) => done(err));   // if query failed
+      });
+  });
+
+  it('should return 404 if todo not found', (done) => {
+    var hexId = new ObjectID().toHexString();
+
+    request(app)
+      .delete(`/todos/${hexId}`)
+      .expect(404)   // should return 404 if not found
+      .end(done);
+  });
+
+  it('should return 404 if object id is invalid', (done) => {
+     var hexId = '123abc';
+
+     request(app)
+      .delete(`/todos/${hexId}`)
+      .expect(404)
+      .end(done);
+  });
 });

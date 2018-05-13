@@ -22,7 +22,7 @@ app.post('/todos', (req, res) => {
     completed: req.body.completed
   });
 
-  // saves todo to the database using Mongoose
+  // saves todo model to the database using Mongoose
   todo.save().then((doc) => {
     // sends the saved document back to the user if the save worked
     res.send(doc);
@@ -77,7 +77,7 @@ app.delete('/todos/:id', (req, res) => {
       return res.status(404).send();
     }
     // no need to include status(200) as 200 is the default (OK)
-    res.send(todo);
+    res.send({todo});
   }).catch((e) => {
     // 400 is bad request
     res.status(400).send();

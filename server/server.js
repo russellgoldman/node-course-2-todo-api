@@ -1,3 +1,4 @@
+const _ = require('lodash');
 var express = require('express');
 var bodyParser = require('body-parser');
 
@@ -82,6 +83,45 @@ app.delete('/todos/:id', (req, res) => {
     // 400 is bad request
     res.status(400).send();
   });
+});
+
+// allows us to update todo items
+app.patch('/todos/:id', (req, res) => {
+  var id = req.params.id;
+  // lodash takes an object and picks out the keys that you want to update
+  var body = _.pick(req.body, ['text', 'completed']);
+
+  if (!ObjectID.isValid(id)) {
+    return res.status(404).send();
+  }
+
+  // use lodash to check if body.completed is a boolean AND body.completed is true
+  if (_.isBoolean(body.completed) && body.completed) {
+    // returns a JavaScript timestamp (number of milliseconds since Jan. 1st 1970 (A.K.A. UNIX Epoch))
+    body.completedAt = new Date().getTime();
+  } else {
+    body.completed = false;
+    body.completedAt = null;
+  }
+
+  Todo.findByIdAndUpdate(id,
+    {
+      $set: body  // MongoDB property
+    }, {
+      // without new: true, the method returns the unaltered object model
+      new: true   // Mongoose property (changes default return to new object model)
+    }
+  ).then((todo) => {
+    // if todo doesn't exist (null)
+    if (!todo) {
+      return res.status(404).send();
+    }
+    // otherwise todo is defined and we send it back
+    res.send({todo});
+  }).catch((e) => {
+    // request failed
+    res.status(400).send();
+  })
 });
 
 app.listen(port, () => {

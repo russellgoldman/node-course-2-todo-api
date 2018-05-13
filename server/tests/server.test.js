@@ -14,7 +14,9 @@ const todos = [{
   text: 'First test todo'
 }, {
   _id: new ObjectID(),
-  text: 'Second test todo'
+  text: 'Second test todo',
+  completed: true,
+  completedAt: 333
 }];
 
 // ALLOWS FOR DELETE TEST TO WORK
@@ -156,6 +158,51 @@ describe('DELETE /todos/:id', () => {
      request(app)
       .delete(`/todos/${hexId}`)
       .expect(404)
+      .end(done);
+  });
+});
+
+describe('PATCH /todos/:id', (done) => {
+  it('should update the todo', (done) => {
+    // grab id of first item
+    var hexId = todos[0]._id.toHexString();
+    var text = 'This should be the new text';
+    // update text, set completed true
+    request(app)
+      .patch(`/todos/${hexId}`)
+      .send({
+        // update the model
+        completed: true,
+        text    // ES6 key/value syntax (key and value are "text": text)
+      })
+      .expect(200)
+      .expect((res) => {
+        expect(res.body.todo.text).toBe(text);    // text assertion
+        expect(res.body.todo.completed).toBe(true);   // completed assertion
+        // completedAt assertion (automatically gets changed when completed is true)
+        expect(typeof res.body.todo.completedAt).toBe('number');
+      })
+      .end(done);
+  });
+
+  it('should clear completedAt when todo is not completed', (done) => {
+    var hexId = todos[1]._id.toHexString();
+    var text = 'This should be the new text!!';
+
+    request(app)
+      .patch(`/todos/${hexId}`)
+      .send({
+        // update the model
+        completed: false,
+        text    // ES6 key/value syntax (key and value are "text": text)
+      })
+      .expect(200)
+      .expect((res) => {
+        expect(res.body.todo.text).toBe(text);    // text assertion
+        expect(res.body.todo.completed).toBe(false);   // completed assertion
+        // completedAt assertion (set to null when completed is false)
+        expect(res.body.todo.completedAt).toBeFalsy();
+      })
       .end(done);
   });
 });

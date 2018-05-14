@@ -106,6 +106,7 @@ app.patch('/todos/:id', (req, res) => {
     body.completedAt = null;
   }
 
+  // Mongoose
   Todo.findByIdAndUpdate(id,
     {
       $set: body  // MongoDB property
@@ -125,6 +126,29 @@ app.patch('/todos/:id', (req, res) => {
     res.status(400).send();
   })
 });
+
+// POST /users
+app.post('/users', (req, res) => {
+  // THIS IS ONLY RUN IF THERE IS NO REQUEST ERROR
+  // don't allow user to enter a tokens array
+  var body = _.pick(req.body, ['email', 'password']);
+  // converts body object to a User (email and password key/value pairs included)
+  var user = new User(body);
+
+  // saves user document to the database
+  user.save().then((user) => {
+    // user being called is the newly saved version
+    return user.generateAuthToken();
+  }).then((token) => {    // user.generateAuthToken() returns a Promise from the returned user.save() method
+    // returns the modified user with the auth token
+    res.header('x-auth', token).send(user);  // "x-auth" is a custom header name and we include the token as its value
+  }).catch((e) => {
+    // always end with a request error catch
+    // error could had resulted from invalid email and/or password
+    res.status(400).send(e);
+  });
+});
+
 
 app.listen(port, () => {
   console.log(`Started on port ${port}`);

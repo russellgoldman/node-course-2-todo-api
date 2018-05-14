@@ -36,7 +36,7 @@ var UserSchema = new mongoose.Schema({
 
 // instance method to determine what data is sent back to the user when a Model is converted into a JSON object
 UserSchema.methods.toJSON = function () {
-  var user = this;
+  var user = this;  // instance methods have their 'this' set to the instance of the model
   // takes Mongoose variable and converts into object that contains only key/value pairs that exist in the Model
   var userObject = user.toObject();
 
@@ -60,6 +60,31 @@ UserSchema.methods.generateAuthToken = function () {
     return token;
   });
 };
+
+// model method
+UserSchema.statics.findByToken = function (token) {
+  // model methods have their this set to the Model
+  var User = this;
+  var decoded;
+
+  try {
+    // will throw an error if token + secret is invalid in JWT
+    decoded = jwt.verify(token, 'abc123');
+  } catch (e) {   // if there was an error from the jwt.verify() method
+    // we need to return a Promise because .then() requires it and User.findOne() also throws one (keep consistency)
+    return Promise.reject();    // foo in reject(foo) is the error callback parameter when catch((error) => {}) is called
+    // return new Promise((resolve, reject) => {
+    //   reject();
+    // });
+  }
+  // if no error, lets find the User that matches the decoded id
+  return User.findOne({
+    // decoded can be a valid JWT (created using JWT) but just not in the User list (gives us null for user, i.e. !user)
+    _id: decoded._id,
+    'tokens.token': token,   // query nested keys
+    'tokens.access': 'auth'  // must have the 'auth' tag
+  });
+}
 
 var User = mongoose.model('Users', UserSchema);
 

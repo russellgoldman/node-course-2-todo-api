@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const validator = require('validator');
 const jwt = require('jsonwebtoken');
 const _ = require('lodash');
+const bcrypt = require('bcryptjs');
 
 // we use mongoose.Schema when we want to add methods (whereas in mongoose.model we cannot add methods)
 var UserSchema = new mongoose.Schema({
@@ -78,13 +79,45 @@ UserSchema.statics.findByToken = function (token) {
     // });
   }
   // if no error, lets find the User that matches the decoded id
-  return User.findOne({
+  return User.findOne({   // if found, user is automatically returned from findOne()
     // decoded can be a valid JWT (created using JWT) but just not in the User list (gives us null for user, i.e. !user)
     _id: decoded._id,
     'tokens.token': token,   // query nested keys
     'tokens.access': 'auth'  // must have the 'auth' tag
   });
-}
+};
+
+
+// (Mongoose Middleware used below)
+/*
+If the instance of the User model tries to save itself to the database
+and has a password that has been modified, then either of the following
+are possible causes:
+
+  1. Password modified from NULL to plain text when document initially
+     created
+  2. Password modified from existing hash to plain text
+
+Since both operations modify the password property to be plain text,
+we must HASH the plain text password to keep the database secure.
+*/
+UserSchema.pre('save', function (next) {
+  // remember that functions have access to the this operator (hence what called the function)
+  var user = this;    // called by the user instance
+
+  // determines if any Mongoose model instance properties have been modified (returns true/false)
+  if (user.isModified('password')) {    // if new password AND user, or modified password of existing user
+    bcrypt.genSalt(10, (err, salt) => {
+      bcrypt.hash(user.password, salt, (err, hash) => {
+        // overwrite user.password (plain text) to be the hash (secure password)
+        user.password = hash;
+        next();   // complete middleware and save the document
+      });
+    });
+  } else {
+    next();
+  }
+});
 
 var User = mongoose.model('Users', UserSchema);
 

@@ -16,7 +16,7 @@ var authenticate = (req, res, next) => {
     req.user = user;
     req.token = token;
     // must be called in order to continue to another function that has called it (e.g. middleware usage)
-    next();
+    next();   // tacks the current request properties (req.user and req.token) ONTO the next route that calls it
   }).catch((e) => {
     // authentication failed, invalid JWT or valid JWT not in user list
     res.status(401).send();

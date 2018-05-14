@@ -1,19 +1,39 @@
 // import hashing function (SHA256)
 const { SHA256 } = require('crypto-js');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 
-var data = {
-  id: 10
-};
+var password = '123abc!';
 
-// returns a HS256 hash with a 'salt' of "123abc"
-var token = jwt.sign(data, '123abc');
-console.log(token);
+// generates a salt (10 rounds for salt characters)
+bcrypt.genSalt(10, (err, salt) => {
+  // if successful, we want to hash the password AND the salt
+  bcrypt.hash(password, salt, (err, hash) => {
+    // if successfull
+    console.log(hash);
+  })
+});
 
-// must pass in the EXACT same 'salt'
-var decoded = jwt.verify(token, '123abc');
-// returns the decoded data
-console.log('decoded', decoded);
+var hashedPassword = '$2a$10$IE3XG3LcLKAOq.k2MGEwQOKkF9S3uDtQOSU7/wNdfOmhZZ1BvHWbW';
+
+// lets you know if your password is the same as your hashedPassword
+bcrypt.compare(password, hashedPassword, (err, res) => {
+  // res is true/false
+  console.log(res);
+});
+
+// var data = {
+//   id: 10
+// };
+//
+// // returns a HS256 hash with a 'salt' of "123abc"
+// var token = jwt.sign(data, '123abc');
+// console.log(token);
+//
+// // must pass in the EXACT same 'salt'
+// var decoded = jwt.verify(token, '123abc');
+// // returns the decoded data
+// console.log('decoded', decoded);
 
 // var message = 'I am user number 3';
 // // SHA256(foo) returns an object

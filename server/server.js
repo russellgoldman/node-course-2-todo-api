@@ -153,7 +153,7 @@ app.post('/users', (req, res) => {
 // implementing authenticate middleware
 app.get('/users/me', authenticate, (req, res) => {
   // returns user object received from the req to authenticate
-  res.send(req.user);
+  res.send(req.user);   // inherits authenticate request object
 });
 
 app.listen(port, () => {

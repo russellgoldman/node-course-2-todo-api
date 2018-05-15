@@ -19,11 +19,11 @@ const port = process.env.PORT || 3000;
 app.use(bodyParser.json());
 
 // Actions to perform when a POST request is sent to the server on /todos
-app.post('/todos', (req, res) => {
+app.post('/todos', authenticate, (req, res) => {
   // instantiating the Todo model
   var todo = new Todo({
     text: req.body.text,
-    completed: req.body.completed
+    _creator: req.user._id    // set _creator to the user id that created it
   });
 
   // saves todo model to the database using Mongoose
@@ -37,9 +37,11 @@ app.post('/todos', (req, res) => {
 });
 
 // Actions to perform when a GET request is sent to the server on /todos
-app.get('/todos', (req, res) => {
+app.get('/todos', authenticate, (req, res) => {
   // Todo object model inherits Mongoose which has the connection route tacked onto it from mongoose.js
-  Todo.find().then((todos) => {
+  Todo.find({
+    _creator: req.user._id    // only return todos that the user (that is currently logged in) has created
+  }).then((todos) => {
     res.send({todos});    // send the todos documents
   }, (err) => {
     res.status(400).send(err);
@@ -47,7 +49,7 @@ app.get('/todos', (req, res) => {
 });
 
 // GET /todos/12341232 (gets any id after the /todos/)
-app.get('/todos/:id', (req, res) => {
+app.get('/todos/:id', authenticate, (req, res) => {
   // key/value pair for :id
   var id = req.params.id;
   // validate id using isValid
@@ -56,7 +58,10 @@ app.get('/todos/:id', (req, res) => {
     return res.status(404).send();
   }
 
-  Todo.findById(id).then((todo) => {
+  Todo.findOne({
+    _id: id,
+    _creator: req.user._id
+  }).then((todo) => {
     if (!todo) {
       // todo not found
       return res.status(404).send();
@@ -65,7 +70,7 @@ app.get('/todos/:id', (req, res) => {
   }).catch((err) => res.status(400).send());
 });
 
-app.delete('/todos/:id', (req, res) => {
+app.delete('/todos/:id', authenticate, (req, res) => {
     // get the id
   var id = req.params.id;
 
@@ -75,7 +80,10 @@ app.delete('/todos/:id', (req, res) => {
     return res.status(404).send();
   }
 
-  Todo.findByIdAndRemove(id).then((todo) => {
+  Todo.findOneAndRemove({
+    _id: id,
+    _creator: req.user._id
+  }).then((todo) => {
     if (!todo) {
       // todo doesn't exist, id is valid but can't be found (404 is not found)
       return res.status(404).send();
@@ -89,7 +97,7 @@ app.delete('/todos/:id', (req, res) => {
 });
 
 // allows us to update todo items
-app.patch('/todos/:id', (req, res) => {
+app.patch('/todos/:id', authenticate, (req, res) => {
   var id = req.params.id;
   // lodash takes an object and picks out the keys that you want to update
   var body = _.pick(req.body, ['text', 'completed']);
@@ -108,7 +116,10 @@ app.patch('/todos/:id', (req, res) => {
   }
 
   // Mongoose
-  Todo.findByIdAndUpdate(id,
+  Todo.findOneAndUpdate({
+    _id: id,
+    _creator: req.user._id
+  },
     {
       $set: body  // MongoDB property
     }, {

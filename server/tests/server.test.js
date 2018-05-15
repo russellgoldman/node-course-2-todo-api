@@ -264,7 +264,7 @@ describe('POST /users', () => {
           // hashed password should NOT be the same as our original plain text password (otherwise our password wasn't hashed)
           expect(user.password).not.toBe(password);
           done();
-        });
+        }).catch((e) => done(e));
       });
   });
 
@@ -288,5 +288,62 @@ describe('POST /users', () => {
       })
       .expect(400)
       .end(done);
+  });
+});
+
+describe('POST /users/login', () => {
+  it('should login user and return auth token', (done) => {
+    request(app)
+      .post('/users/login')
+      .send({
+        email: users[1].email,
+        password: users[1].password
+      })
+      .expect(200)
+      .expect((res) => {
+        expect(res.headers['x-auth']).toBeTruthy();
+      })
+      .end((err, res) => {
+        if (err) {
+          return done(err);
+        }
+
+        User.findById(users[1]._id).then((user) => {
+          // confirm auth token is correct
+
+          // tokens object (user.tokens[0]) has AT LEAST these properties
+          expect(user.tokens[0]).toHaveProperty('access', 'auth');
+          expect(user.tokens[0]).toHaveProperty('token', user.tokens[0].token);
+          // if all goes well...
+          done();
+        }).catch((e) => done(e));   // otherwise return the error
+      });
+  });
+
+  it('should reject invalid login', (done) => {
+    request(app)
+      .post('/users/login')
+      .send({
+        email: users[1].email,
+        password: users[1].password + '1'   // should be an invalid password
+      })
+      .expect(400)
+      .expect((res) => {
+        expect(res.headers['x-auth']).toBeFalsy();
+      })
+      .end((err, res) => {
+        if (err) {
+          return done(err);
+        }
+
+        User.findById(users[1]._id).then((user) => {
+          // confirm auth token is correct
+
+          // if the tokens array is 0, the user is not logged in (i.e. not authenticated)
+          expect(user.tokens.length).toBe(0);
+          expect(user.tokens.length).toBe(0);
+          done();
+        }).catch((e) => done(e));   // otherwise return the error
+      });
   });
 });

@@ -13,8 +13,8 @@ var authenticate = (req, res, next) => {
       // res.status(401).send();
     }
     // setting up user and token properties for use in other routes
-    req.user = user;
-    req.token = token;
+    req.user = user;    // attaching the found user object to the request
+    req.token = token;  // attaching token to the request
     // must be called in order to continue to another function that has called it (e.g. middleware usage)
     next();   // tacks the current request properties (req.user and req.token) ONTO the next route that calls it
   }).catch((e) => {

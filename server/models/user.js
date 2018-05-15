@@ -52,13 +52,26 @@ UserSchema.methods.generateAuthToken = function () {
   var access = 'auth';    // sets the access type - we're using authentication
   var token = jwt.sign({_id: user._id.toHexString(), access}, 'abc123').toString();
 
-  // creates a valid authentication token using JWT and saves it to the tokens array
+  // creates a valid authentication token using JWT and adds it to the existing tokens array
   user.tokens = user.tokens.concat([{access, token}]);
   // saves the updated user instance to the database as a document
   return user.save().then(() => {
     // if we are returning an item from the function, we need to return from both the anonymous function
     // AND the outer function
     return token;
+  });
+};
+
+UserSchema.methods.removeToken = function (token) {
+  var user = this;
+
+  // we MUST return the user.update() as it returns a Promise
+  return user.update({
+    $pull: {
+      tokens: {
+        token: token   // if the token parameter matches a token in the tokens array, remove it
+      }
+    }
   });
 };
 

@@ -87,6 +87,30 @@ UserSchema.statics.findByToken = function (token) {
   });
 };
 
+// model method
+UserSchema.statics.findByCredentials = function (email, password) {
+  // the password parameter is plain text
+
+  // make User the this operator in the function
+  var User = this;
+
+  return User.findOne({email}).then((user) => {
+    if (!user) {
+      // reject the Promise, will invoke catch call where the method findByCredentials was called
+      return Promise.reject();
+    }
+
+    // bcrypt doesn't support Promises, only callbacks, so let us return a new Promise with bcrypt in it
+    return new Promise((resolve, reject) => {
+      // password is plain text, user.password is the hashed password from the database
+      bcrypt.compare(password, user.password, (err, res) => {
+        // if result is true, resolve is called, otherwise reject
+        res ? resolve(user) : reject();
+      });
+    });
+  })
+};
+
 
 // (Mongoose Middleware used below)
 /*

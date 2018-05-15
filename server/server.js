@@ -128,13 +128,13 @@ app.patch('/todos/:id', (req, res) => {
   })
 });
 
-// POST /users
+// POST /users (create user)
 app.post('/users', (req, res) => {
   // THIS IS ONLY RUN IF THERE IS NO REQUEST ERROR
   // don't allow user to enter a tokens array
-  var body = _.pick(req.body, ['email', 'password']);
+  var body = _.pick(req.body, ['email', 'password']);   // our body WILL display the password publically
   // converts body object to a User (email and password key/value pairs included)
-  var user = new User(body);
+  var user = new User(body);  // our User WON'T print the password (see .toJSON() in User Model)
 
   // saves user document to the database
   user.save().then((user) => {
@@ -147,6 +147,23 @@ app.post('/users', (req, res) => {
     // always end with a request error catch
     // error could had resulted from invalid email and/or password
     res.status(400).send(e);
+  });
+});
+
+// POST /users/login {email, password}
+app.post('/users/login', (req, res) => {
+  var body = _.pick(req.body, ['email', 'password']);
+
+  // verify that a User exists with this email
+  User.findByCredentials(body.email, body.password).then((user) => {
+    // if user exists
+    return user.generateAuthToken().then((token) => {
+      // generate the token and assign it to the 'x-auth' header so we know they've been loggied in
+      res.header('x-auth', token).send(user);
+    });
+  }).catch((e) => {
+    // if user doesn't exist
+    res.status(400).send();
   });
 });
 

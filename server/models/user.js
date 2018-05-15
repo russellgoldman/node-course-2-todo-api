@@ -50,7 +50,7 @@ UserSchema.methods.generateAuthToken = function () {
   // we need a this keyword to store the individual document (we cannot do this in arrow functions)
   var user = this;    // user is the instance
   var access = 'auth';    // sets the access type - we're using authentication
-  var token = jwt.sign({_id: user._id.toHexString(), access}, 'abc123').toString();
+  var token = jwt.sign({_id: user._id.toHexString(), access}, process.env.JWT_SECRET).toString();
 
   // creates a valid authentication token using JWT and concatenate to the empty tokens array
   user.tokens = user.tokens.concat([{access, token}]);
@@ -82,7 +82,7 @@ UserSchema.statics.findByToken = function (token) {
 
   try {
     // will throw an error if token + secret is invalid in JWT
-    decoded = jwt.verify(token, 'abc123');
+    decoded = jwt.verify(token, process.env.JWT_SECRET);
   } catch (e) {   // if there was an error from the jwt.verify() method
     // we need to return a Promise because .then() requires it and User.findOne() also throws one (keep consistency)
     return Promise.reject();    // foo in reject(foo) is the error callback parameter when catch((error) => {}) is called

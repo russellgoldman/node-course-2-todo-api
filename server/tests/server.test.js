@@ -3,29 +3,17 @@ const request = require('supertest');
 const { ObjectID } = require('mongodb');
 
 // .. is for going backwards relatively
-var { app } = require('./../server');
-var { Todo } = require('./../models/todo');
+const { app } = require('./../server');
+const { Todo } = require('./../models/todo');
+const { User } = require('./../models/user')
+const { todos, populateTodos, users, populateUsers } = require('./seed/seed');
 
 // beforeEach is included in Mocha, has the done function built-in as a parameter
 // beforeEach runs before ANY requests, and terminates when done() is called
 
-const todos = [{
-  _id: new ObjectID(),    // create a valid Object ID on the fly
-  text: 'First test todo'
-}, {
-  _id: new ObjectID(),
-  text: 'Second test todo',
-  completed: true,
-  completedAt: 333
-}];
-
+beforeEach(populateUsers);
 // ALLOWS FOR DELETE TEST TO WORK
-beforeEach((done) => {
-  Todo.remove({}).then(() => {
-    // convert all items in array into Mongo object models AND saves them in our DB (new Todo + save())
-    return Todo.insertMany(todos)      // each item in todos is an object which will be converted
-  }).then(() => done());
-})
+beforeEach(populateTodos);
 
 // mocha
 describe('POST /todos', () => {
@@ -203,6 +191,102 @@ describe('PATCH /todos/:id', (done) => {
         // completedAt assertion (set to null when completed is false)
         expect(res.body.todo.completedAt).toBeFalsy();
       })
+      .end(done);
+  });
+});
+
+/*
+The GET /users/me request handles authentication. We just need to test if
+the signs of authentication are present, and if not then the test failed.
+
+Since the GET /users/me request sends back the collected user ONLY if everything
+goes well within 'authenticate', then we can check to see if we receive the original
+user with SAME properties as the o
+
+*/
+describe('GET /users/me', () => {
+  it('should return user if authenticated', (done) => {
+    request(app)
+      .get('/users/me')   // just because we get the request back doesn't mean it worked
+      // set header so authenticate can check if token (that represents the User instance) is in db
+      .set('x-auth', users[0].tokens[0].token)
+      .expect(200)  // request should good, token must had been found in authenticate
+      .expect((res) => {    // confirm the data received is the same of that sent
+        // expect id's are the same (RES automatically converts id to hexString, need to match it)
+        expect(res.body._id).toBe(users[0]._id.toHexString());
+        expect(res.body.email).toBe(users[0].email);
+      })
+      .end(done);   // if everything worked, then user is authenticated
+  });
+
+  it('should return 401 if not authenticated', (done) => {
+    request(app)
+      .get('/users/me')
+      // we didn't include a token so the request automatically fails
+      .expect(401)    // 401 signifies "Unauthorized"
+      .expect((res) => {
+        // authentication should fail, thus no user is sent back in GET /users/me
+        expect(res.body).toEqual({})
+      })
+      .end(done);
+  });
+});
+
+describe('POST /users', () => {
+  it('should create a user', (done) => {
+    // assumes there is a unique and valid email and password
+    var email = 'email@example.com';
+    var password = '123mnb!';
+
+    request(app)
+      .post('/users')
+      .send({email, password})
+      .expect(200)
+      .expect((res) => {
+        /* Since we have toJSON() in place as an instance method, everytime a user is returned
+           by a request, only the _id and email properties are available for access. Thus the
+           hashed password is ALWAYS hidden, except from the MongoDB database itself (which
+           can only be viewed by a system administrator anyways).
+        */
+        expect(res.headers['x-auth']).toBeTruthy();
+        expect(res.body._id).toBeTruthy();   // valid instance of User model must contain _id
+        expect(res.body.email).toBe(email); // valid instance of User model must contain email
+      })
+      .end((err) => {
+        if (err) {
+          // if error, exit with error
+          return done(err);
+        }
+
+        // otherwise query the database to determine more hidden properties not available to standard Users
+        User.findOne({email}).then((user) => {
+          expect(user).toBeTruthy;  // the user must exist
+          // hashed password should NOT be the same as our original plain text password (otherwise our password wasn't hashed)
+          expect(user.password).not.toBe(password);
+          done();
+        });
+      });
+  });
+
+  it('should return validation errors if request invalid', (done) => {
+    request(app)
+      .post('/users')
+      .send({
+        email: 'and',
+        password: '123'
+      })
+      .expect(400)
+      .end(done);
+  });
+
+  it('should not create user if email in use', (done) => {
+    request(app)
+      .post('/users')
+      .send({
+        email: users[0].email,     // email already in use by other User
+        password: 'password123!'   // valid password
+      })
+      .expect(400)
       .end(done);
   });
 });
